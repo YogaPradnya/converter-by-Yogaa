@@ -119,6 +119,8 @@ export default function Home() {
           size: formatBytes(f.size),
           status: "queued",
           progress: 0,
+          startTime: null,
+          eta: null,
           data: null,
         }));
         return [...prev, ...newEntries];
@@ -236,7 +238,7 @@ export default function Home() {
       setFiles((prev) =>
         prev.map((item) =>
           item.id === fileId
-            ? { ...item, status: "converting", progress: 0 }
+            ? { ...item, status: "converting", progress: 0, startTime: Date.now(), eta: null }
             : item
         )
       );
@@ -246,11 +248,19 @@ export default function Home() {
 
         const data = await convertFile(ffmpeg, f.file, outputName, (ratio) => {
           setFiles((prev) =>
-            prev.map((item) =>
-              item.id === fileId
-                ? { ...item, progress: Math.round(ratio * 100) }
-                : item
-            )
+            prev.map((item) => {
+              if (item.id === fileId) {
+                const progress = Math.round(ratio * 100);
+                let eta = null;
+                if (item.startTime && progress > 0 && progress < 100) {
+                  const elapsed = Date.now() - item.startTime;
+                  const totalEstimated = elapsed / (progress / 100);
+                  eta = Math.round((totalEstimated - elapsed) / 1000); // seconds
+                }
+                return { ...item, progress, eta };
+              }
+              return item;
+            })
           );
         });
 
@@ -519,7 +529,12 @@ export default function Home() {
                           {file.status}
                         </span>
                         {file.status === "converting" && (
-                          <span>&bull; {file.progress}%</span>
+                          <>
+                            <span>&bull; {file.progress}%</span>
+                            {file.eta !== null && file.eta > 0 && (
+                              <span>&bull; {Math.floor(file.eta / 60)}m {file.eta % 60}s remaining</span>
+                            )}
+                          </>
                         )}
                       </div>
                       {(file.status === "converting" || file.status === "completed") && (
