@@ -107,7 +107,7 @@ self.onmessage = async (e) => {
             "-map", "0:a?", // Audio opsional
             "-vf", filterArgs,
             "-c:v", "libx264",
-            "-preset", "ultrafast",
+            "-preset", "fast",
             "-crf", "28",
             "-c:a", "copy",
             "-movflags", "+faststart",
