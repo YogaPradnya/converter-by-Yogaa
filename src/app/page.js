@@ -287,7 +287,7 @@ export default function Home() {
               return item;
             })
           );
-        });
+        }, hsOptions);
 
         if (cancelRef.current) break;
 
