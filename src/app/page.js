@@ -319,59 +319,46 @@ export default function Home() {
     addToast(`Downloading ${completed.length} file${completed.length > 1 ? "s" : ""}`, "info");
   }, [files, addToast]);
 
-  const downloadAllAsZip = useCallback(async () => {
+  const downloadZipPart = useCallback(async (startIndex, endIndex) => {
     const completed = files.filter((f) => f.status === "completed" && f.data);
-    if (completed.length === 0) return;
+    const chunk = completed.slice(startIndex, endIndex);
+    if (chunk.length === 0) return;
 
     setIsZipping(true);
+    addToast(`Menyiapkan ${chunk.length} file untuk ZIP...`, "info");
 
     try {
       const JSZip = (await import("jszip")).default;
-      const MAX_FILES_PER_ZIP = 5; // Batas aman untuk memori browser per file ZIP
-      const totalParts = Math.ceil(completed.length / MAX_FILES_PER_ZIP);
+      const zip = new JSZip();
 
-      addToast(`Menyiapkan ${completed.length} file (dibagi menjadi ${totalParts} bagian ZIP)...`, "info");
+      // Memasukkan setiap file di dalam part ini ke dalam zip
+      chunk.forEach((f) => {
+        const fileName = f.newName || f.name.replace(/\.mkv$/i, ".mp4");
+        zip.file(fileName, f.data);
+      });
 
-      for (let i = 0; i < totalParts; i++) {
-        const zip = new JSZip();
-        const startIdx = i * MAX_FILES_PER_ZIP;
-        const chunk = completed.slice(startIdx, startIdx + MAX_FILES_PER_ZIP);
+      // Generate blob file zip
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const zipUrl = URL.createObjectURL(zipBlob);
+      
+      const a = document.createElement("a");
+      a.href = zipUrl;
+      
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const partIndicator = (endIndex - startIndex < completed.length) 
+        ? `-part-${Math.floor(startIndex / 20) + 1}` 
+        : ``;
+      a.download = `converted-videos-${timestamp}${partIndicator}.zip`;
+      
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(zipUrl);
 
-        addToast(`Memproses ZIP bagian ${i + 1} dari ${totalParts}...`, "info");
-
-        // Memasukkan setiap file ke dalam zip chunk
-        chunk.forEach((f) => {
-          const fileName = f.newName || f.name.replace(/\.mkv$/i, ".mp4");
-          zip.file(fileName, f.data);
-        });
-
-        // Generate blob file zip
-        const zipBlob = await zip.generateAsync({ type: "blob" });
-        const zipUrl = URL.createObjectURL(zipBlob);
-        
-        const a = document.createElement("a");
-        a.href = zipUrl;
-        
-        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-        a.download = totalParts > 1 
-          ? `converted-videos-${timestamp}-part${i + 1}.zip` 
-          : `converted-videos-${timestamp}.zip`;
-        
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(zipUrl);
-
-        // Beri jeda waktu agar browser sempat membersihkan memori (Garbage Collection)
-        if (i < totalParts - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-        }
-      }
-
-      addToast(`Semua file ZIP berhasil diunduh (${totalParts} bagian)`, "success");
+      addToast("File ZIP berhasil diunduh!", "success");
     } catch (err) {
       console.error("Error zipping files:", err);
-      addToast("Gagal membuat file ZIP karena memori penuh. Silakan coba unduh satu per satu.", "error");
+      addToast("Gagal membuat file ZIP karena memori penuh.", "error");
     } finally {
       setIsZipping(false);
     }
@@ -517,8 +504,8 @@ export default function Home() {
                 {hasCompleted && completedCount > 1 && (
                   <button
                     className="btn-icon"
-                    title="Download all as ZIP"
-                    onClick={downloadAllAsZip}
+                    title={completedCount > 20 ? "Unduh ZIP bagian 1" : "Download all as ZIP"}
+                    onClick={() => downloadZipPart(0, Math.min(20, completedCount))}
                     disabled={isZipping}
                     type="button"
                   >
@@ -796,14 +783,34 @@ export default function Home() {
               </button>
             )}
             {hasCompleted && !isConverting && completedCount > 1 && (
-              <button
-                className="btn btn-secondary"
-                type="button"
-                onClick={downloadAllAsZip}
-                disabled={isZipping}
-              >
-                {isZipping ? "Zipping files..." : `Download All as ZIP (${completedCount})`}
-              </button>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "12px" }}>
+                {Math.ceil(completedCount / 20) === 1 ? (
+                  <button
+                    className="btn btn-secondary"
+                    type="button"
+                    onClick={() => downloadZipPart(0, completedCount)}
+                    disabled={isZipping}
+                  >
+                    {isZipping ? "Zipping files..." : `Download All as ZIP (${completedCount})`}
+                  </button>
+                ) : (
+                  Array.from({ length: Math.ceil(completedCount / 20) }).map((_, i) => {
+                    const start = i * 20;
+                    const end = Math.min(start + 20, completedCount);
+                    return (
+                      <button
+                        key={i}
+                        className="btn btn-secondary"
+                        type="button"
+                        onClick={() => downloadZipPart(start, end)}
+                        disabled={isZipping}
+                      >
+                        {isZipping ? "Zipping..." : `Download Part ${i + 1} (${start + 1} - ${end})`}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
             )}
           </div>
         </aside>

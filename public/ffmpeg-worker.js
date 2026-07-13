@@ -77,7 +77,9 @@ self.onmessage = async (e) => {
         // Run conversion
         await ffmpeg.exec([
           "-i", inputName,
-          "-c", "copy",
+          "-map", "0",          // Salin semua stream (video, audio, subtitle)
+          "-c", "copy",         // Copy video & audio tanpa re-encode
+          "-c:s", "mov_text",   // Ubah format subtitle menjadi mov_text untuk MP4
           "-movflags", "+faststart",
           outputName,
         ]);
