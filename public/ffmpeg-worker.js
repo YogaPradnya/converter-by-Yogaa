@@ -9,8 +9,8 @@ self.document = {
   getElementsByTagName: () => ([{ appendChild: () => {} }])
 };
 
-// Load the FFmpeg UMD build from CDN so it can automatically fetch its missing chunks
-importScripts('https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/umd/ffmpeg.js');
+// Load the FFmpeg UMD build we downloaded earlier
+importScripts('/ffmpeg/ffmpeg.min.js');
 
 let ffmpeg = null;
 
