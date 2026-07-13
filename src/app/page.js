@@ -66,6 +66,7 @@ export default function Home() {
   // Hardsub States
   const [hardsubEnabled, setHardsubEnabled] = useState(false);
   const [hardsubOriginalStyle, setHardsubOriginalStyle] = useState(true);
+  const [hardsubOverrideFont, setHardsubOverrideFont] = useState(false);
   const [hardsubFontSize, setHardsubFontSize] = useState(20);
   const [hardsubScale, setHardsubScale] = useState(50);
   const [hardsubColor, setHardsubColor] = useState("#ffffff");
@@ -264,12 +265,11 @@ export default function Home() {
         const hsOptions = {
           enabled: hardsubEnabled,
           originalStyle: hardsubOriginalStyle,
+          overrideFont: hardsubOverrideFont,
           fontSize: hardsubFontSize,
           scale: hardsubScale,
           primaryColour: hexToAssColor(hardsubColor)
         };
-        
-        console.log(`[Main] Mengirim file ${f.name} dengan opsi:`, hsOptions);
 
         const data = await convertFile(ffmpeg, f.file, outputName, (ratio) => {
           setFiles((prev) =>
@@ -330,6 +330,7 @@ export default function Home() {
     addToast,
     hardsubEnabled,
     hardsubOriginalStyle,
+    hardsubOverrideFont,
     hardsubFontSize,
     hardsubScale,
     hardsubColor
@@ -818,6 +819,23 @@ export default function Home() {
                   </label>
                   <span className="field-helper" style={{marginTop: '4px', display: 'block'}}>
                     Centang agar posisi, font, & lirik (Karaoke) tidak rusak saat di-hardsub.
+                  </span>
+                </div>
+
+                <div className="settings-section" style={{marginBottom: '12px', borderBottom: hardsubOriginalStyle ? 'none' : '1px solid #e1e4e8', paddingBottom: '12px'}}>
+                  <label className="toggle-wrapper" style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                    <input
+                      type="checkbox"
+                      checked={hardsubOverrideFont}
+                      onChange={(e) => setHardsubOverrideFont(e.target.checked)}
+                      style={{width: '18px', height: '18px'}}
+                    />
+                    <span className="toggle-label" style={{fontWeight: 'bold', fontSize: '14px', margin: 0}}>
+                      Gunakan Font Poppins
+                    </span>
+                  </label>
+                  <span className="field-helper" style={{marginTop: '4px', display: 'block'}}>
+                    Paksa semua subtitle menggunakan font Poppins.
                   </span>
                 </div>
 

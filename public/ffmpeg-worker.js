@@ -41,6 +41,15 @@ async function initFFmpeg() {
     coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
     wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
   });
+
+  // Inject Poppins Font for Hardsub
+  try {
+    const fontResponse = await fetch("https://raw.githubusercontent.com/google/fonts/main/ofl/poppins/Poppins-Regular.ttf");
+    const fontData = await fontResponse.arrayBuffer();
+    await ffmpeg.writeFile("Poppins-Regular.ttf", new Uint8Array(fontData));
+  } catch (err) {
+    console.warn("Gagal mengunduh font Poppins", err);
+  }
 }
 
 // Handle messages from the main thread
@@ -76,16 +85,20 @@ self.onmessage = async (e) => {
       try {
         // Run conversion
         let ffmpegArgs = [];
-        console.log("[Worker] Menerima opsi hardsub:", hardsubOptions);
         
         if (hardsubOptions && hardsubOptions.enabled) {
           // HARDSUB MODE (Re-encode)
-          const { fontSize, scale, primaryColour, originalStyle } = hardsubOptions;
+          const { fontSize, scale, primaryColour, originalStyle, overrideFont } = hardsubOptions;
           
-          let filterArgs = `subtitles=${inputName}`;
+          let filterArgs = `subtitles=${inputName}:fontsdir=/`;
+          
           if (!originalStyle) {
-            const forceStyle = `FontSize=${fontSize},ScaleX=${scale},ScaleY=${scale},PrimaryColour=${primaryColour}`;
+            let forceStyle = `FontSize=${fontSize},ScaleX=${scale},ScaleY=${scale},PrimaryColour=${primaryColour}`;
+            if (overrideFont) forceStyle += `,Fontname=Poppins`;
             filterArgs += `:force_style='${forceStyle}'`;
+          } else if (overrideFont) {
+            // Walau gaya asli dipertahankan, kita paksa ganti nama fontnya saja
+            filterArgs += `:force_style='Fontname=Poppins'`;
           }
           
           ffmpegArgs = [
@@ -114,7 +127,6 @@ self.onmessage = async (e) => {
           ];
         }
 
-        console.log("[Worker] Mengeksekusi FFmpeg dengan argumen:", ffmpegArgs.join(" "));
         const exitCode = await ffmpeg.exec(ffmpegArgs);
 
         if (exitCode !== 0) {
