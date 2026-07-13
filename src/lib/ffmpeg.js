@@ -11,7 +11,8 @@ export async function getFFmpeg(onLog) {
   if (typeof window === "undefined") return null;
 
   if (!worker) {
-    worker = new Worker("/ffmpeg-worker.js");
+    // Menambahkan query string dinamis (?v=timestamp) untuk mencegah browser/Vercel melakukan cache secara agresif
+    worker = new Worker(`/ffmpeg-worker.js?v=${Date.now()}`);
     
     worker.onmessage = (e) => {
       const { type, payload, message } = e.data;
