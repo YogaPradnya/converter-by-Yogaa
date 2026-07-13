@@ -79,14 +79,19 @@ self.onmessage = async (e) => {
         
         if (hardsubOptions && hardsubOptions.enabled) {
           // HARDSUB MODE (Re-encode)
-          const { fontSize, scale, primaryColour } = hardsubOptions;
-          const forceStyle = `FontSize=${fontSize},ScaleX=${scale},ScaleY=${scale},PrimaryColour=${primaryColour}`;
+          const { fontSize, scale, primaryColour, originalStyle } = hardsubOptions;
+          
+          let filterArgs = `subtitles=${inputName}`;
+          if (!originalStyle) {
+            const forceStyle = `FontSize=${fontSize},ScaleX=${scale},ScaleY=${scale},PrimaryColour=${primaryColour}`;
+            filterArgs += `:force_style='${forceStyle}'`;
+          }
           
           ffmpegArgs = [
             "-i", inputName,
             "-map", "0:v",
             "-map", "0:a",
-            "-vf", `subtitles=${inputName}:force_style='${forceStyle}'`,
+            "-vf", filterArgs,
             "-c:v", "libx264",
             "-preset", "ultrafast",
             "-crf", "28",

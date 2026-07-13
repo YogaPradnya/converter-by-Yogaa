@@ -65,6 +65,7 @@ export default function Home() {
 
   // Hardsub States
   const [hardsubEnabled, setHardsubEnabled] = useState(false);
+  const [hardsubOriginalStyle, setHardsubOriginalStyle] = useState(true);
   const [hardsubFontSize, setHardsubFontSize] = useState(20);
   const [hardsubScale, setHardsubScale] = useState(50);
   const [hardsubColor, setHardsubColor] = useState("#ffffff");
@@ -262,6 +263,7 @@ export default function Home() {
 
         const hsOptions = {
           enabled: hardsubEnabled,
+          originalStyle: hardsubOriginalStyle,
           fontSize: hardsubFontSize,
           scale: hardsubScale,
           primaryColour: hexToAssColor(hardsubColor)
@@ -789,42 +791,64 @@ export default function Home() {
 
             {hardsubEnabled && (
               <div className="hardsub-options" style={{ marginTop: '12px', padding: '12px', background: '#f8f9fa', borderRadius: '8px', border: '1px solid #e1e4e8' }}>
-                <div className="settings-section" style={{marginBottom: '10px'}}>
-                  <label className="settings-label">Ukuran Font</label>
-                  <input
-                    type="number"
-                    className="input-text"
-                    value={hardsubFontSize}
-                    onChange={(e) => setHardsubFontSize(Number(e.target.value))}
-                    min="10"
-                    max="100"
-                  />
-                </div>
                 
-                <div className="settings-section" style={{marginBottom: '10px'}}>
-                  <label className="settings-label">Skala (%)</label>
-                  <input
-                    type="number"
-                    className="input-text"
-                    value={hardsubScale}
-                    onChange={(e) => setHardsubScale(Number(e.target.value))}
-                    min="10"
-                    max="200"
-                  />
-                </div>
-                
-                <div className="settings-section">
-                  <label className="settings-label">Warna Teks</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="settings-section" style={{marginBottom: '12px', borderBottom: '1px solid #e1e4e8', paddingBottom: '12px'}}>
+                  <label className="toggle-wrapper" style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
                     <input
-                      type="color"
-                      value={hardsubColor}
-                      onChange={(e) => setHardsubColor(e.target.value)}
-                      style={{ width: '40px', height: '40px', padding: '0', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                      type="checkbox"
+                      checked={hardsubOriginalStyle}
+                      onChange={(e) => setHardsubOriginalStyle(e.target.checked)}
+                      style={{width: '18px', height: '18px'}}
                     />
-                    <span style={{fontFamily: 'monospace'}}>{hardsubColor.toUpperCase()}</span>
-                  </div>
+                    <span className="toggle-label" style={{fontWeight: 'bold', fontSize: '14px', margin: 0}}>
+                      Pertahankan Gaya Asli Subtitle (Anime)
+                    </span>
+                  </label>
+                  <span className="field-helper" style={{marginTop: '4px', display: 'block'}}>
+                    Centang agar posisi, font, & lirik (Karaoke) tidak rusak saat di-hardsub.
+                  </span>
                 </div>
+
+                {!hardsubOriginalStyle && (
+                  <>
+                    <div className="settings-section" style={{marginBottom: '10px'}}>
+                      <label className="settings-label">Ukuran Font</label>
+                      <input
+                        type="number"
+                        className="input-text"
+                        value={hardsubFontSize}
+                        onChange={(e) => setHardsubFontSize(Number(e.target.value))}
+                        min="10"
+                        max="100"
+                      />
+                    </div>
+                    
+                    <div className="settings-section" style={{marginBottom: '10px'}}>
+                      <label className="settings-label">Skala (%)</label>
+                      <input
+                        type="number"
+                        className="input-text"
+                        value={hardsubScale}
+                        onChange={(e) => setHardsubScale(Number(e.target.value))}
+                        min="10"
+                        max="200"
+                      />
+                    </div>
+                    
+                    <div className="settings-section">
+                      <label className="settings-label">Warna Teks</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="color"
+                          value={hardsubColor}
+                          onChange={(e) => setHardsubColor(e.target.value)}
+                          style={{ width: '40px', height: '40px', padding: '0', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                        />
+                        <span style={{fontFamily: 'monospace'}}>{hardsubColor.toUpperCase()}</span>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>
