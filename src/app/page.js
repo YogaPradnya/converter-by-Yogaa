@@ -663,6 +663,7 @@ export default function Home() {
             <button
               className="btn btn-secondary"
               disabled={Boolean(!autoRenameEnabled || files.length === 0)}
+              suppressHydrationWarning
               id="btn-apply-rename"
               type="button"
               onClick={applyBatchRename}
@@ -694,6 +695,7 @@ export default function Home() {
               <button
                 className="btn btn-primary"
                 disabled={Boolean(files.length === 0 || (completedCount === totalFiles && failedCount === 0 && totalFiles > 0))}
+                suppressHydrationWarning
                 id="btn-start-convert"
                 type="button"
                 onClick={startConversion}
