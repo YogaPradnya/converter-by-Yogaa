@@ -2,22 +2,16 @@ let ffmpegInstance = null;
 
 /**
  * Get or create the singleton FFmpeg instance.
- * Loads FFmpeg class and utilities directly from CDN to bypass bundler issues.
+ * Loads FFmpeg from local public/ffmpeg files (same-origin) to avoid CORS issues.
  */
 export async function getFFmpeg(onLog) {
   if (ffmpegInstance && ffmpegInstance.loaded) {
     return ffmpegInstance;
   }
 
-  // Load FFmpeg class directly from CDN ESM build to bypass Turbopack bundling
-  const { FFmpeg } = await import(
-    /* webpackIgnore: true */
-    "https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js"
-  );
-  const { toBlobURL } = await import(
-    /* webpackIgnore: true */
-    "https://unpkg.com/@ffmpeg/util@0.12.2/dist/esm/index.js"
-  );
+  // Load FFmpeg from node_modules (bundled by Next.js)
+  const { FFmpeg } = await import("@ffmpeg/ffmpeg");
+  const { toBlobURL } = await import("@ffmpeg/util");
 
   const ffmpeg = new FFmpeg();
 
@@ -27,14 +21,12 @@ export async function getFFmpeg(onLog) {
     });
   }
 
-  const coreBaseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm";
+  // Use local files from public/ffmpeg (served from same origin)
+  const baseURL = "/ffmpeg";
 
   await ffmpeg.load({
-    coreURL: await toBlobURL(`${coreBaseURL}/ffmpeg-core.js`, "text/javascript"),
-    wasmURL: await toBlobURL(
-      `${coreBaseURL}/ffmpeg-core.wasm`,
-      "application/wasm"
-    ),
+    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
   });
 
   ffmpegInstance = ffmpeg;
