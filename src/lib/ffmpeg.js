@@ -1,31 +1,16 @@
+import { FFmpeg } from "@ffmpeg/ffmpeg";
+import { fetchFile, toBlobURL } from "@ffmpeg/util";
+
 let ffmpegInstance = null;
 
 /**
- * Convert a URL to a Blob URL.
- * Replaces @ffmpeg/util's toBlobURL since the UMD build has issues.
- */
-async function toBlobURL(url, mimeType) {
-  const response = await fetch(url);
-  const data = await response.arrayBuffer();
-  const blob = new Blob([data], { type: mimeType });
-  return URL.createObjectURL(blob);
-}
-
-/**
  * Get or create the singleton FFmpeg instance.
- * Uses FFmpeg loaded globally via script tags in layout.js
+ * Uses standard npm imports (static imports with Webpack).
  */
 export async function getFFmpeg(onLog) {
   if (ffmpegInstance && ffmpegInstance.loaded) {
     return ffmpegInstance;
   }
-
-  // Wait for global FFmpeg to be available (loaded via script tags)
-  if (typeof window === "undefined" || !window.FFmpegWASM) {
-    throw new Error("FFmpeg library not loaded. Check script tags in layout.js");
-  }
-
-  const { FFmpeg } = window.FFmpegWASM;
 
   const ffmpeg = new FFmpeg();
 
