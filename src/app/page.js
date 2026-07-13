@@ -274,8 +274,13 @@ export default function Home() {
       <header className="header" id="app-header">
         <div className="header-container">
           <div className="logo-section">
-            <div className="logo-icon">
-              <img src="/logo.png" alt="MKV Converter" />
+            <div className="logo-icon" style={{ display: 'flex', alignItems: 'center', color: 'var(--primary)' }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+                <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                <path d="m10 11 3 3-3 3" />
+                <path d="m14 11 3 3-3 3" />
+              </svg>
             </div>
             <span className="logo-text">MKV Converter</span>
             <span className="badge-pill">Browser</span>
