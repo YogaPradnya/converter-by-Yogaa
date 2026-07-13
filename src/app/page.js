@@ -324,40 +324,54 @@ export default function Home() {
     if (completed.length === 0) return;
 
     setIsZipping(true);
-    addToast(`Menyiapkan ${completed.length} file untuk di-zip...`, "info");
 
     try {
-      // Import dinamis untuk mengurangi ukuran bundle awal
       const JSZip = (await import("jszip")).default;
-      const zip = new JSZip();
+      const MAX_FILES_PER_ZIP = 5; // Batas aman untuk memori browser per file ZIP
+      const totalParts = Math.ceil(completed.length / MAX_FILES_PER_ZIP);
 
-      // Memasukkan setiap file ke dalam zip
-      completed.forEach((f) => {
-        const fileName = f.newName || f.name.replace(/\.mkv$/i, ".mp4");
-        // f.data adalah Uint8Array dari file video MP4
-        zip.file(fileName, f.data);
-      });
+      addToast(`Menyiapkan ${completed.length} file (dibagi menjadi ${totalParts} bagian ZIP)...`, "info");
 
-      // Generate blob file zip (bisa memakan waktu tergantung ukuran file)
-      const zipBlob = await zip.generateAsync({ type: "blob" });
+      for (let i = 0; i < totalParts; i++) {
+        const zip = new JSZip();
+        const startIdx = i * MAX_FILES_PER_ZIP;
+        const chunk = completed.slice(startIdx, startIdx + MAX_FILES_PER_ZIP);
 
-      // Trigger download
-      const zipUrl = URL.createObjectURL(zipBlob);
-      const a = document.createElement("a");
-      a.href = zipUrl;
-      
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      a.download = `converted-videos-${timestamp}.zip`;
-      
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(zipUrl);
+        addToast(`Memproses ZIP bagian ${i + 1} dari ${totalParts}...`, "info");
 
-      addToast("File ZIP berhasil diunduh", "success");
+        // Memasukkan setiap file ke dalam zip chunk
+        chunk.forEach((f) => {
+          const fileName = f.newName || f.name.replace(/\.mkv$/i, ".mp4");
+          zip.file(fileName, f.data);
+        });
+
+        // Generate blob file zip
+        const zipBlob = await zip.generateAsync({ type: "blob" });
+        const zipUrl = URL.createObjectURL(zipBlob);
+        
+        const a = document.createElement("a");
+        a.href = zipUrl;
+        
+        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+        a.download = totalParts > 1 
+          ? `converted-videos-${timestamp}-part${i + 1}.zip` 
+          : `converted-videos-${timestamp}.zip`;
+        
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(zipUrl);
+
+        // Beri jeda waktu agar browser sempat membersihkan memori (Garbage Collection)
+        if (i < totalParts - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+      }
+
+      addToast(`Semua file ZIP berhasil diunduh (${totalParts} bagian)`, "success");
     } catch (err) {
       console.error("Error zipping files:", err);
-      addToast("Gagal membuat file ZIP", "error");
+      addToast("Gagal membuat file ZIP karena memori penuh. Silakan coba unduh satu per satu.", "error");
     } finally {
       setIsZipping(false);
     }
