@@ -77,11 +77,18 @@ self.onmessage = async (e) => {
         // Run conversion
         const exitCode = await ffmpeg.exec([
           "-i", inputName,
-          "-map", "0:v",        // Salin semua stream video
-          "-map", "0:a",        // Salin semua stream audio
-          "-map", "0:s?",       // Salin semua stream subtitle (jika ada)
-          "-c", "copy",         // Copy video & audio tanpa re-encode
-          "-c:s", "mov_text",   // Ubah format subtitle menjadi mov_text untuk MP4
+          "-map", "0:v",        // Ambil stream video
+          "-map", "0:a",        // Ambil stream audio (jika ada)
+          
+          // Membakar (Hardsub) subtitle ke dalam frame video
+          // Menggunakan force_style untuk mengatur ukuran 20, skala 50%, warna putih
+          "-vf", `subtitles=${inputName}:force_style='FontSize=20,ScaleX=50,ScaleY=50,PrimaryColour=&H00FFFFFF'`,
+          
+          "-c:v", "libx264",    // Re-encode video (wajib untuk hardsub)
+          "-preset", "ultrafast", // Setting krusial: Gunakan preset tercepat agar tab browser tidak freeze
+          "-crf", "28",         // Sedikit kompresi agar rendering lebih cepat
+          
+          "-c:a", "copy",       // Copy audio tanpa re-encode agar menghemat waktu
           "-movflags", "+faststart",
           outputName,
         ]);
