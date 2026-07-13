@@ -321,7 +321,17 @@ export default function Home() {
     } else if (successCount > 0) {
       addToast(`All ${successCount} file${successCount > 1 ? "s" : ""} converted successfully`, "success");
     }
-  }, [files, isConverting, ffmpegReady, addToast]);
+  }, [
+    files,
+    isConverting,
+    ffmpegReady,
+    addToast,
+    hardsubEnabled,
+    hardsubOriginalStyle,
+    hardsubFontSize,
+    hardsubScale,
+    hardsubColor
+  ]);
 
   const cancelConversion = useCallback(() => {
     cancelRef.current = true;
