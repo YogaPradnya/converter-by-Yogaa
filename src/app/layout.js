@@ -29,7 +29,6 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <head>
-        <script src="/ffmpeg/ffmpeg-util.min.js" />
         <script src="/ffmpeg/ffmpeg.min.js" />
       </head>
       <body>{children}</body>
