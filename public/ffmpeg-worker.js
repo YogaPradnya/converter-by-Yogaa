@@ -76,6 +76,7 @@ self.onmessage = async (e) => {
       try {
         // Run conversion
         let ffmpegArgs = [];
+        console.log("[Worker] Menerima opsi hardsub:", hardsubOptions);
         
         if (hardsubOptions && hardsubOptions.enabled) {
           // HARDSUB MODE (Re-encode)
@@ -90,7 +91,7 @@ self.onmessage = async (e) => {
           ffmpegArgs = [
             "-i", inputName,
             "-map", "0:v",
-            "-map", "0:a",
+            "-map", "0:a?", // Audio opsional
             "-vf", filterArgs,
             "-c:v", "libx264",
             "-preset", "ultrafast",
@@ -104,7 +105,7 @@ self.onmessage = async (e) => {
           ffmpegArgs = [
             "-i", inputName,
             "-map", "0:v",
-            "-map", "0:a",
+            "-map", "0:a?", // Audio opsional
             "-map", "0:s?",
             "-c", "copy",
             "-c:s", "mov_text",
@@ -113,6 +114,7 @@ self.onmessage = async (e) => {
           ];
         }
 
+        console.log("[Worker] Mengeksekusi FFmpeg dengan argumen:", ffmpegArgs.join(" "));
         const exitCode = await ffmpeg.exec(ffmpegArgs);
 
         if (exitCode !== 0) {

@@ -268,6 +268,8 @@ export default function Home() {
           scale: hardsubScale,
           primaryColour: hexToAssColor(hardsubColor)
         };
+        
+        console.log(`[Main] Mengirim file ${f.name} dengan opsi:`, hsOptions);
 
         const data = await convertFile(ffmpeg, f.file, outputName, (ratio) => {
           setFiles((prev) =>
