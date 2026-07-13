@@ -1,0 +1,102 @@
+// Web Worker for FFmpeg
+// This runs in a separate thread, completely isolated from Next.js bundling
+
+// Load the FFmpeg UMD build we downloaded earlier
+importScripts('/ffmpeg/ffmpeg.min.js');
+
+let ffmpeg = null;
+
+// Helper to convert URL to Blob URL (needed for FFmpeg core files)
+async function toBlobURL(url, mimeType) {
+  const response = await fetch(url);
+  const data = await response.arrayBuffer();
+  const blob = new Blob([data], { type: mimeType });
+  return URL.createObjectURL(blob);
+}
+
+// Initialize FFmpeg
+async function initFFmpeg() {
+  if (ffmpeg && ffmpeg.loaded) return;
+
+  // The UMD build exposes FFmpegWASM on the global self object in a worker
+  const { FFmpeg } = self.FFmpegWASM;
+  ffmpeg = new FFmpeg();
+
+  ffmpeg.on("log", ({ message }) => {
+    self.postMessage({ type: "log", message });
+  });
+
+  const baseURL = "/ffmpeg";
+
+  await ffmpeg.load({
+    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+  });
+}
+
+// Handle messages from the main thread
+self.onmessage = async (e) => {
+  const { type, payload } = e.data;
+
+  try {
+    if (type === "INIT") {
+      await initFFmpeg();
+      self.postMessage({ type: "INIT_SUCCESS" });
+    } 
+    
+    else if (type === "CONVERT") {
+      const { id, fileData, outputName } = payload;
+      
+      await initFFmpeg(); // Ensure initialized
+      
+      const inputName = `input_${Date.now()}.mkv`;
+
+      // Write file to virtual FS
+      await ffmpeg.writeFile(inputName, new Uint8Array(fileData));
+
+      // Progress handler for this specific conversion
+      const progressHandler = ({ progress }) => {
+        self.postMessage({ 
+          type: "PROGRESS", 
+          payload: { id, progress: Math.max(0, Math.min(1, progress)) } 
+        });
+      };
+      
+      ffmpeg.on("progress", progressHandler);
+
+      try {
+        // Run conversion
+        await ffmpeg.exec([
+          "-i", inputName,
+          "-c", "copy",
+          "-movflags", "+faststart",
+          outputName,
+        ]);
+
+        // Read result
+        const data = await ffmpeg.readFile(outputName);
+
+        // Cleanup
+        await ffmpeg.deleteFile(inputName);
+        await ffmpeg.deleteFile(outputName);
+
+        // Send success back
+        self.postMessage({ 
+          type: "CONVERT_SUCCESS", 
+          payload: { id, data: data.buffer } 
+        }, [data.buffer]); // Transfer buffer for performance
+
+      } finally {
+        ffmpeg.off("progress", progressHandler);
+      }
+    }
+  } catch (error) {
+    self.postMessage({ 
+      type: "ERROR", 
+      payload: { 
+        id: payload?.id, 
+        message: error.message || "Unknown error in worker" 
+      } 
+    });
+  }
+};
