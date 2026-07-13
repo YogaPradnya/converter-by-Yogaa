@@ -113,7 +113,7 @@ export default function RenameSettings({
       </div>
 
       <button
-        className="btn btn-secondary"
+        className="btn btn-primary"
         disabled={Boolean(!autoRenameEnabled || filesCount === 0)}
         suppressHydrationWarning
         id="btn-apply-rename"
@@ -121,7 +121,7 @@ export default function RenameSettings({
         onClick={onApplyBatchRename}
       >
         Apply Batch Rename
-      </button>
+        </button>
     </div>
   );
 }

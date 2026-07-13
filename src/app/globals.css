@@ -1019,6 +1019,20 @@ h1, h2, h3, h4, h5, h6 {
    Responsive
    ============================================================ */
 
+/* ============================================================
+   Mobile Settings Dropdown
+   ============================================================ */
+
+.mobile-only-flex {
+  display: none !important;
+}
+
+.mobile-settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-base);
+}
+
 /* Tablet and below */
 @media (max-width: 1024px) {
   .app-container {
@@ -1033,6 +1047,19 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Mobile */
 @media (max-width: 640px) {
+  .mobile-only-flex {
+    display: flex !important;
+  }
+  
+  .mobile-settings-content {
+    display: none;
+  }
+  
+  .mobile-settings-content.open {
+    display: flex;
+    margin-top: var(--sp-md);
+  }
+
   .header-container {
     padding: 0 var(--sp-base);
   }
@@ -1048,7 +1075,21 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .dashboard-stats {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--sp-xs);
+  }
+
+  .stat-card {
+    padding: var(--sp-sm) var(--sp-xs);
+  }
+
+  .stat-val {
+    font-size: 20px;
+  }
+
+  .stat-lbl {
+    font-size: 9px;
+    letter-spacing: 0.5px;
   }
 
   .dropzone {
