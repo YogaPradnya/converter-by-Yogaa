@@ -103,7 +103,7 @@ self.onmessage = async (e) => {
       type: "ERROR", 
       payload: { 
         id: payload?.id, 
-        message: error.message || "Unknown error in worker" 
+        message: error instanceof Error ? `${error.message}\n${error.stack}` : String(error)
       } 
     });
   }
