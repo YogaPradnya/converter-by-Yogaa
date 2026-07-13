@@ -63,11 +63,24 @@ export default function Home() {
   const [toasts, setToasts] = useState([]);
   const [isZipping, setIsZipping] = useState(false);
 
+  // Hardsub States
+  const [hardsubEnabled, setHardsubEnabled] = useState(false);
+  const [hardsubFontSize, setHardsubFontSize] = useState(20);
+  const [hardsubScale, setHardsubScale] = useState(50);
+  const [hardsubColor, setHardsubColor] = useState("#ffffff");
+
   const fileInputRef = useRef(null);
   const cancelRef = useRef(false);
   let toastIdCounter = useRef(0);
 
-  // -- Toast helpers --
+  // -- Helpers --
+  function hexToAssColor(hex) {
+    const r = hex.substring(1, 3);
+    const g = hex.substring(3, 5);
+    const b = hex.substring(5, 7);
+    return `&H00${b}${g}${r}`;
+  }
+
   const addToast = useCallback((message, type = "info") => {
     const id = ++toastIdCounter.current;
     setToasts((prev) => [...prev, { id, message, type }]);
@@ -246,6 +259,13 @@ export default function Home() {
 
       try {
         const outputName = f.newName || f.name.replace(/\.mkv$/i, ".mp4");
+
+        const hsOptions = {
+          enabled: hardsubEnabled,
+          fontSize: hardsubFontSize,
+          scale: hardsubScale,
+          primaryColour: hexToAssColor(hardsubColor)
+        };
 
         const data = await convertFile(ffmpeg, f.file, outputName, (ratio) => {
           setFiles((prev) =>
@@ -736,6 +756,77 @@ export default function Home() {
             >
               Apply Batch Rename
             </button>
+          </div>
+
+          {/* SUBTITLE SETTINGS */}
+          <div className="settings-card" id="subtitle-settings">
+            <h3 className="settings-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              Subtitle Settings
+            </h3>
+            
+            <div className="settings-section">
+              <label className="toggle-wrapper">
+                <span className="toggle-label" style={{color: hardsubEnabled ? "#ff4757" : "inherit", fontWeight: hardsubEnabled ? "bold" : "normal"}}>
+                  Enable Hardsub (Lambat)
+                </span>
+                <input
+                  type="checkbox"
+                  className="toggle-input"
+                  checked={hardsubEnabled}
+                  onChange={(e) => setHardsubEnabled(e.target.checked)}
+                />
+                <span className="toggle-track">
+                  <span className="toggle-knob" />
+                </span>
+              </label>
+              <span className="field-helper">
+                Membakar subtitle secara permanen pada video. Peringatan: Proses ini <b>sangat lambat</b> pada browser.
+              </span>
+            </div>
+
+            {hardsubEnabled && (
+              <div className="hardsub-options" style={{ marginTop: '12px', padding: '12px', background: '#f8f9fa', borderRadius: '8px', border: '1px solid #e1e4e8' }}>
+                <div className="settings-section" style={{marginBottom: '10px'}}>
+                  <label className="settings-label">Ukuran Font</label>
+                  <input
+                    type="number"
+                    className="input-text"
+                    value={hardsubFontSize}
+                    onChange={(e) => setHardsubFontSize(Number(e.target.value))}
+                    min="10"
+                    max="100"
+                  />
+                </div>
+                
+                <div className="settings-section" style={{marginBottom: '10px'}}>
+                  <label className="settings-label">Skala (%)</label>
+                  <input
+                    type="number"
+                    className="input-text"
+                    value={hardsubScale}
+                    onChange={(e) => setHardsubScale(Number(e.target.value))}
+                    min="10"
+                    max="200"
+                  />
+                </div>
+                
+                <div className="settings-section">
+                  <label className="settings-label">Warna Teks</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="color"
+                      value={hardsubColor}
+                      onChange={(e) => setHardsubColor(e.target.value)}
+                      style={{ width: '40px', height: '40px', padding: '0', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                    />
+                    <span style={{fontFamily: 'monospace'}}>{hardsubColor.toUpperCase()}</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ACTIONS */}

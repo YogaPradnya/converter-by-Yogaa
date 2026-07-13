@@ -54,7 +54,7 @@ self.onmessage = async (e) => {
     } 
     
     else if (type === "CONVERT") {
-      const { id, fileData, outputName } = payload;
+      const { id, fileData, outputName, hardsubOptions } = payload;
       
       await initFFmpeg(); // Ensure initialized
       
@@ -75,23 +75,40 @@ self.onmessage = async (e) => {
 
       try {
         // Run conversion
-        const exitCode = await ffmpeg.exec([
-          "-i", inputName,
-          "-map", "0:v",        // Ambil stream video
-          "-map", "0:a",        // Ambil stream audio (jika ada)
+        let ffmpegArgs = [];
+        
+        if (hardsubOptions && hardsubOptions.enabled) {
+          // HARDSUB MODE (Re-encode)
+          const { fontSize, scale, primaryColour } = hardsubOptions;
+          const forceStyle = `FontSize=${fontSize},ScaleX=${scale},ScaleY=${scale},PrimaryColour=${primaryColour}`;
           
-          // Membakar (Hardsub) subtitle ke dalam frame video
-          // Menggunakan force_style untuk mengatur ukuran 20, skala 50%, warna putih
-          "-vf", `subtitles=${inputName}:force_style='FontSize=20,ScaleX=50,ScaleY=50,PrimaryColour=&H00FFFFFF'`,
-          
-          "-c:v", "libx264",    // Re-encode video (wajib untuk hardsub)
-          "-preset", "ultrafast", // Setting krusial: Gunakan preset tercepat agar tab browser tidak freeze
-          "-crf", "28",         // Sedikit kompresi agar rendering lebih cepat
-          
-          "-c:a", "copy",       // Copy audio tanpa re-encode agar menghemat waktu
-          "-movflags", "+faststart",
-          outputName,
-        ]);
+          ffmpegArgs = [
+            "-i", inputName,
+            "-map", "0:v",
+            "-map", "0:a",
+            "-vf", `subtitles=${inputName}:force_style='${forceStyle}'`,
+            "-c:v", "libx264",
+            "-preset", "ultrafast",
+            "-crf", "28",
+            "-c:a", "copy",
+            "-movflags", "+faststart",
+            outputName,
+          ];
+        } else {
+          // SOFTSUB MODE (Fast copy)
+          ffmpegArgs = [
+            "-i", inputName,
+            "-map", "0:v",
+            "-map", "0:a",
+            "-map", "0:s?",
+            "-c", "copy",
+            "-c:s", "mov_text",
+            "-movflags", "+faststart",
+            outputName,
+          ];
+        }
+
+        const exitCode = await ffmpeg.exec(ffmpegArgs);
 
         if (exitCode !== 0) {
           throw new Error("FFmpeg gagal memproses file ini. Membatalkan konversi.");
