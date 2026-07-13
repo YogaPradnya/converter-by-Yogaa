@@ -75,14 +75,20 @@ self.onmessage = async (e) => {
 
       try {
         // Run conversion
-        await ffmpeg.exec([
+        const exitCode = await ffmpeg.exec([
           "-i", inputName,
-          "-map", "0",          // Salin semua stream (video, audio, subtitle)
+          "-map", "0:v",        // Salin semua stream video
+          "-map", "0:a",        // Salin semua stream audio
+          "-map", "0:s?",       // Salin semua stream subtitle (jika ada)
           "-c", "copy",         // Copy video & audio tanpa re-encode
           "-c:s", "mov_text",   // Ubah format subtitle menjadi mov_text untuk MP4
           "-movflags", "+faststart",
           outputName,
         ]);
+
+        if (exitCode !== 0) {
+          throw new Error("FFmpeg gagal memproses file ini. Membatalkan konversi.");
+        }
 
         // Read result
         const data = await ffmpeg.readFile(outputName);

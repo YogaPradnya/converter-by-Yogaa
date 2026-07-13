@@ -93,7 +93,11 @@ export function downloadFile(data, filename) {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  
+  // Berikan jeda sebelum menghapus memori agar download tidak dibatalkan paksa
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 2000);
 }
 
 /**
