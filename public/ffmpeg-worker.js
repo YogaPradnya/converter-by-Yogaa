@@ -14,6 +14,14 @@ importScripts('/ffmpeg/ffmpeg.min.js');
 
 let ffmpeg = null;
 
+// Helper to convert URL to Blob URL (needed for FFmpeg core files to bypass cross-origin worker restrictions)
+async function toBlobURL(url, mimeType) {
+  const response = await fetch(url);
+  const data = await response.arrayBuffer();
+  const blob = new Blob([data], { type: mimeType });
+  return URL.createObjectURL(blob);
+}
+
 // Initialize FFmpeg
 async function initFFmpeg() {
   if (ffmpeg && ffmpeg.loaded) return;
@@ -26,11 +34,12 @@ async function initFFmpeg() {
     self.postMessage({ type: "log", message });
   });
 
-  const baseURL = "/ffmpeg";
+  // Use official unpkg CDN for core files
+  const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
 
   await ffmpeg.load({
-    coreURL: `${baseURL}/ffmpeg-core.js`,
-    wasmURL: `${baseURL}/ffmpeg-core.wasm`,
+    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
   });
 }
 
