@@ -61,6 +61,7 @@ export default function Home() {
   const [isConverting, setIsConverting] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [toasts, setToasts] = useState([]);
+  const [isZipping, setIsZipping] = useState(false);
 
   const fileInputRef = useRef(null);
   const cancelRef = useRef(false);
@@ -318,6 +319,50 @@ export default function Home() {
     addToast(`Downloading ${completed.length} file${completed.length > 1 ? "s" : ""}`, "info");
   }, [files, addToast]);
 
+  const downloadAllAsZip = useCallback(async () => {
+    const completed = files.filter((f) => f.status === "completed" && f.data);
+    if (completed.length === 0) return;
+
+    setIsZipping(true);
+    addToast(`Menyiapkan ${completed.length} file untuk di-zip...`, "info");
+
+    try {
+      // Import dinamis untuk mengurangi ukuran bundle awal
+      const JSZip = (await import("jszip")).default;
+      const zip = new JSZip();
+
+      // Memasukkan setiap file ke dalam zip
+      completed.forEach((f) => {
+        const fileName = f.newName || f.name.replace(/\.mkv$/i, ".mp4");
+        // f.data adalah Uint8Array dari file video MP4
+        zip.file(fileName, f.data);
+      });
+
+      // Generate blob file zip (bisa memakan waktu tergantung ukuran file)
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+
+      // Trigger download
+      const zipUrl = URL.createObjectURL(zipBlob);
+      const a = document.createElement("a");
+      a.href = zipUrl;
+      
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      a.download = `converted-videos-${timestamp}.zip`;
+      
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(zipUrl);
+
+      addToast("File ZIP berhasil diunduh", "success");
+    } catch (err) {
+      console.error("Error zipping files:", err);
+      addToast("Gagal membuat file ZIP", "error");
+    } finally {
+      setIsZipping(false);
+    }
+  }, [files, addToast]);
+
   // ---- Token helpers ----
 
   const addToken = (token) => {
@@ -455,18 +500,23 @@ export default function Home() {
             <div className="panel-header">
               <h3>Queue {totalFiles > 0 && <span className="queue-count">{totalFiles}</span>}</h3>
               <div style={{ display: "flex", gap: "4px" }}>
-                {hasCompleted && (
+                {hasCompleted && completedCount > 1 && (
                   <button
                     className="btn-icon"
-                    title="Download all completed"
-                    onClick={downloadAll}
+                    title="Download all as ZIP"
+                    onClick={downloadAllAsZip}
+                    disabled={isZipping}
                     type="button"
                   >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                      <polyline points="7 10 12 15 17 10" />
-                      <line x1="12" x2="12" y1="15" y2="3" />
-                    </svg>
+                    {isZipping ? (
+                      <span style={{ fontSize: "12px", fontWeight: "bold" }}>ZIP</span>
+                    ) : (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" x2="12" y1="15" y2="3" />
+                      </svg>
+                    )}
                   </button>
                 )}
                 <button
@@ -731,13 +781,14 @@ export default function Home() {
                 Cancel Conversion
               </button>
             )}
-            {hasCompleted && !isConverting && (
+            {hasCompleted && !isConverting && completedCount > 1 && (
               <button
                 className="btn btn-secondary"
                 type="button"
-                onClick={downloadAll}
+                onClick={downloadAllAsZip}
+                disabled={isZipping}
               >
-                Download All ({completedCount})
+                {isZipping ? "Zipping files..." : `Download All as ZIP (${completedCount})`}
               </button>
             )}
           </div>
