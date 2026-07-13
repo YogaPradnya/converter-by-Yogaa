@@ -28,6 +28,10 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+      <head>
+        <script src="/ffmpeg/ffmpeg-util.js" />
+        <script src="/ffmpeg/ffmpeg.js" />
+      </head>
       <body>{children}</body>
     </html>
   );

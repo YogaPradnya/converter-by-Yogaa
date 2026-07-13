@@ -2,16 +2,20 @@ let ffmpegInstance = null;
 
 /**
  * Get or create the singleton FFmpeg instance.
- * Loads FFmpeg from local public/ffmpeg files (same-origin) to avoid CORS issues.
+ * Uses FFmpeg loaded globally via script tags in layout.js
  */
 export async function getFFmpeg(onLog) {
   if (ffmpegInstance && ffmpegInstance.loaded) {
     return ffmpegInstance;
   }
 
-  // Load FFmpeg from node_modules (bundled by Next.js)
-  const { FFmpeg } = await import("@ffmpeg/ffmpeg");
-  const { toBlobURL } = await import("@ffmpeg/util");
+  // Wait for global FFmpeg to be available (loaded via script tags)
+  if (typeof window === "undefined" || !window.FFmpegWASM || !window.FFmpegUtil) {
+    throw new Error("FFmpeg libraries not loaded. Check script tags in layout.js");
+  }
+
+  const { FFmpeg } = window.FFmpegWASM;
+  const { toBlobURL } = window.FFmpegUtil;
 
   const ffmpeg = new FFmpeg();
 
