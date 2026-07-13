@@ -662,7 +662,7 @@ export default function Home() {
 
             <button
               className="btn btn-secondary"
-              disabled={!autoRenameEnabled || files.length === 0}
+              disabled={Boolean(!autoRenameEnabled || files.length === 0)}
               id="btn-apply-rename"
               type="button"
               onClick={applyBatchRename}
@@ -693,7 +693,7 @@ export default function Home() {
             {!isConverting ? (
               <button
                 className="btn btn-primary"
-                disabled={files.length === 0 || (completedCount === totalFiles && failedCount === 0 && totalFiles > 0)}
+                disabled={Boolean(files.length === 0 || (completedCount === totalFiles && failedCount === 0 && totalFiles > 0))}
                 id="btn-start-convert"
                 type="button"
                 onClick={startConversion}
