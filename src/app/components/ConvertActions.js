@@ -17,8 +17,44 @@ export default function ConvertActions({
   onStartConversion,
   onCancelConversion,
   onDownloadZip,
+  activeTab = "mkvtomp4",
 }) {
   const hasCompleted = completedCount > 0;
+  const isResizer = activeTab === "resizer";
+
+  // Dynamic texts
+  const titleText = isResizer ? "Resize" : "Convert";
+  
+  let helperText = "";
+  if (files.length === 0) {
+    helperText = isResizer ? "Add video files to begin resizing." : "Add MKV files to begin conversion.";
+  } else if (isConverting) {
+    helperText = isResizer 
+      ? `Resizing... ${completedCount}/${totalFiles} selesai.` 
+      : `Converting... ${completedCount}/${totalFiles} selesai.`;
+  } else if (failedCount > 0) {
+    helperText = isResizer
+      ? `${failedCount} gagal. Klik resize untuk mencoba lagi.`
+      : `${failedCount} gagal. Klik convert untuk mencoba lagi.`;
+  } else if (completedCount === totalFiles) {
+    helperText = isResizer
+      ? `Semua ${totalFiles} file video berhasil di-resize.`
+      : `Semua ${totalFiles} file berhasil dikonversi.`;
+  } else {
+    helperText = isResizer
+      ? `Siap memproses ${files.length} file video.`
+      : `Siap memproses ${files.length} file.`;
+  }
+
+  const startBtnText = ffmpegLoading
+    ? "Loading FFmpeg..."
+    : failedCount > 0
+      ? "Retry Failed"
+      : isResizer
+        ? "Resize All Videos"
+        : "Convert All to MP4";
+
+  const cancelBtnText = isResizer ? "Cancel Resizing" : "Cancel Conversion";
 
   return (
     <div className="settings-card" id="process-actions">
@@ -26,18 +62,10 @@ export default function ConvertActions({
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
         </svg>
-        Convert
+        {titleText}
       </h3>
       <p className="field-helper">
-        {files.length === 0
-          ? "Add MKV files to begin conversion."
-          : isConverting
-            ? `Converting... ${completedCount}/${totalFiles} done.`
-            : failedCount > 0
-              ? `${failedCount} failed. Click convert to retry.`
-              : completedCount === totalFiles
-                ? `All ${totalFiles} file${totalFiles > 1 ? "s" : ""} converted.`
-                : `Ready to process ${files.length} file${files.length > 1 ? "s" : ""}.`}
+        {helperText}
       </p>
       {!isConverting ? (
         <button
@@ -48,11 +76,7 @@ export default function ConvertActions({
           type="button"
           onClick={onStartConversion}
         >
-          {ffmpegLoading
-            ? "Loading FFmpeg..."
-            : failedCount > 0
-              ? "Retry Failed"
-              : "Convert All to MP4"}
+          {startBtnText}
         </button>
       ) : (
         <button
@@ -61,7 +85,7 @@ export default function ConvertActions({
           type="button"
           onClick={onCancelConversion}
         >
-          Cancel Conversion
+          {cancelBtnText}
         </button>
       )}
       {hasCompleted && !isConverting && completedCount > 1 && (

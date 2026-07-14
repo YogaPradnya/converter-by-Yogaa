@@ -586,6 +586,7 @@ export default function Home() {
             onStartConversion={startConversion}
             onCancelConversion={cancelConversion}
             onDownloadZip={downloadZipPart}
+            activeTab={activeTab}
           />
         </aside>
       </main>
