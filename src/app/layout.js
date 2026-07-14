@@ -33,7 +33,11 @@ export default function RootLayout({ children }) {
       <body>
         {children}
         <Script 
-          src="https://pl30356323.effectivecpmnetwork.com/1f/c1/36/1fc136931a4dbe06351e49326c469a21.js" 
+          src="https://scarleterror.com/1f/c1/36/1fc136931a4dbe06351e49326c469a21.js" 
+          strategy="afterInteractive"
+        />
+        <Script 
+          src="https://scarleterror.com/56/64/89/5664898f55115d977b523298fbfaedc0.js" 
           strategy="afterInteractive"
         />
       </body>

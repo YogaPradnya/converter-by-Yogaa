@@ -427,7 +427,16 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="footer" id="app-footer">
-        <p>@Yogaa 2026</p>
+        <p>
+          <a 
+            href="https://scarleterror.com/uexxx1dft?key=dac0ebf097004a1689b7f79a52dcf97e" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            style={{ color: "inherit", textDecoration: "none" }}
+          >
+            @Yogaa 2026
+          </a>
+        </p>
       </footer>
     </>
   );
