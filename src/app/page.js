@@ -2,7 +2,6 @@
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { downloadFile, formatBytes } from "@/lib/ffmpeg";
-import { registerDownloadSW, removeCachedFile, clearAllCachedFiles, getDownloadUrl } from "@/lib/downloadService";
 import { generateId, applyTemplate } from "@/app/utils/helpers";
 import { useToast } from "@/app/hooks/useToast";
 import { useTheme } from "@/app/hooks/useTheme";
@@ -65,9 +64,15 @@ export default function Home() {
     cancelConversion,
   } = useFFmpegConverter({ files, setFiles, addToast, hardsubConfig });
 
-  // -- Registrasi Download Service Worker --
+  // -- Hapus / Unregister Service Worker jika pernah terdaftar --
   useEffect(() => {
-    registerDownloadSW();
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (let registration of registrations) {
+          registration.unregister();
+        }
+      });
+    }
   }, []);
 
   // -- Memory Cleanup for Blob URLs on Unmount --
@@ -149,8 +154,6 @@ export default function Home() {
         if (fileToRemove.blobUrl) {
           URL.revokeObjectURL(fileToRemove.blobUrl);
         }
-        // Hapus juga dari cache Service Worker
-        removeCachedFile(fileToRemove.id);
       }
       return prev.filter((f) => f.id !== id);
     });
@@ -179,7 +182,6 @@ export default function Home() {
         URL.revokeObjectURL(f.blobUrl);
       }
     });
-    clearAllCachedFiles();
     setFiles([]);
     addToast("Queue cleared", "info");
   }, [isConverting, files, addToast]);
@@ -191,7 +193,6 @@ export default function Home() {
         URL.revokeObjectURL(f.blobUrl);
       }
     });
-    clearAllCachedFiles();
     setFiles([]);
     addToast("Queue cleared", "info");
   }, [addToast, files]);
@@ -224,32 +225,10 @@ export default function Home() {
 
   // -- Download Handlers --
 
-  const handleDownload = useCallback(async (file) => {
+  const handleDownload = useCallback((file) => {
     const filename = file.newName || file.name.replace(/\.mkv$/i, ".mp4");
 
-    // Coba unduh melalui Service Worker terlebih dahulu (nama file dijamin konsisten)
-    if (file.swCached) {
-      try {
-        const swUrl = getDownloadUrl(file.id, filename);
-        const res = await fetch(swUrl);
-        if (res.ok) {
-          const blob = await res.blob();
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = filename;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setTimeout(() => URL.revokeObjectURL(url), 10000);
-          return; // Berhasil via SW, tidak perlu fallback
-        }
-      } catch (_) {
-        // SW gagal, lanjut ke fallback blobUrl
-      }
-    }
-
-    // Fallback: unduh langsung via blobUrl atau data mentah
+    // Unduh langsung via blobUrl atau data mentah
     if (file.blobUrl) {
       downloadFile(file.blobUrl, filename);
     } else if (file.data) {

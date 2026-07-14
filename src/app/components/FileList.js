@@ -76,8 +76,10 @@ function FileRow({
             href={file.blobUrl || "#"}
             download={file.newName || file.name.replace(/\.mkv$/i, ".mp4")}
             onClick={(e) => {
-              e.preventDefault();
-              onDownload(file);
+              if (!file.blobUrl && file.data) {
+                e.preventDefault();
+                onDownload(file);
+              }
             }}
             className="btn-icon"
             title="Download"
