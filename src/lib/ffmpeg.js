@@ -112,13 +112,17 @@ export function downloadFile(urlOrData, filename) {
   let shouldRevoke = false;
 
   if (typeof urlOrData !== "string") {
-    const blob = new Blob([urlOrData.buffer], { type: "video/mp4" });
-    url = URL.createObjectURL(blob);
+    // Gunakan File object untuk menyertakan nama file asli di metadata blob
+    const fileObj = new File([urlOrData.buffer], filename, { type: "video/mp4" });
+    url = URL.createObjectURL(fileObj);
     shouldRevoke = true;
   }
 
+  // Tambahkan hash fragment berisi nama file di akhir URL untuk membantu 1DM mendeteksi nama file
+  const downloadUrl = url.includes("#") ? url : `${url}#${encodeURIComponent(filename)}`;
+
   const a = document.createElement("a");
-  a.href = url;
+  a.href = downloadUrl;
   a.download = filename;
   document.body.appendChild(a);
   a.click();

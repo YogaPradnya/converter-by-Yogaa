@@ -104,9 +104,10 @@ export function useFFmpegConverter({ files, setFiles, addToast, hardsubConfig })
 
         if (cancelRef.current) break;
 
-        // Buat Blob URL agar memori data tetap hidup untuk diunduh secara stabil
-        const blob = new Blob([data.buffer], { type: "video/mp4" });
-        const blobUrl = URL.createObjectURL(blob);
+        // Buat File object dengan nama yang sesuai agar metadata penamaan tersimpan di browser
+        const outputFileName = f.newName || f.name.replace(/\.mkv$/i, ".mp4");
+        const fileObj = new File([data.buffer], outputFileName, { type: "video/mp4" });
+        const blobUrl = URL.createObjectURL(fileObj);
 
         setFiles((prev) =>
           prev.map((item) =>

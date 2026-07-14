@@ -96,10 +96,26 @@ export default function Home() {
   useEffect(() => {
     if (!autoRenameEnabled) return;
     setFiles((prev) =>
-      prev.map((f, i) => ({
-        ...f,
-        newName: applyTemplate(renameFormat, f.name, i, customStartNumber),
-      }))
+      prev.map((f, i) => {
+        const newName = applyTemplate(renameFormat, f.name, i, customStartNumber);
+        if (f.newName === newName) return f;
+
+        // Recreate blobUrl dengan File object nama baru jika file sudah completed
+        let updatedBlobUrl = f.blobUrl;
+        if (f.status === "completed" && f.data) {
+          if (f.blobUrl) {
+            URL.revokeObjectURL(f.blobUrl);
+          }
+          const fileObj = new File([f.data.buffer], newName, { type: "video/mp4" });
+          updatedBlobUrl = URL.createObjectURL(fileObj);
+        }
+
+        return {
+          ...f,
+          newName,
+          blobUrl: updatedBlobUrl,
+        };
+      })
     );
   }, [renameFormat, customStartNumber, autoRenameEnabled]);
 
