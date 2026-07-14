@@ -13,8 +13,10 @@ import { hexToAssColor } from "@/app/utils/helpers";
  * @param {Function} params.setFiles - State setter for file list
  * @param {Function} params.addToast - Toast notification function
  * @param {Object} params.hardsubConfig - Hardsub configuration object
+ * @param {string} params.resolution - Selected resolution for Video Resizer tab
+ * @param {string} params.activeTab - Active tab: "mkvtomp4" or "resizer"
  */
-export function useFFmpegConverter({ files, setFiles, addToast, hardsubConfig }) {
+export function useFFmpegConverter({ files, setFiles, addToast, hardsubConfig, resolution = "original", activeTab = "mkvtomp4" }) {
   const [ffmpegReady, setFfmpegReady] = useState(false);
   const [ffmpegLoading, setFfmpegLoading] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
@@ -73,10 +75,11 @@ export function useFFmpegConverter({ files, setFiles, addToast, hardsubConfig })
       );
 
       try {
-        const outputName = f.newName || f.name.replace(/\.mkv$/i, ".mp4");
+        const isResizer = activeTab === "resizer";
+        const outputName = f.newName || (isResizer ? f.name : f.name.replace(/\.mkv$/i, ".mp4"));
 
         const hsOptions = {
-          enabled: hardsubConfig.enabled,
+          enabled: !isResizer && hardsubConfig.enabled,
           originalStyle: hardsubConfig.originalStyle,
           overrideFont: hardsubConfig.overrideFont,
           fontSize: hardsubConfig.fontSize,
@@ -84,29 +87,47 @@ export function useFFmpegConverter({ files, setFiles, addToast, hardsubConfig })
           primaryColour: hexToAssColor(hardsubConfig.color),
         };
 
-        const data = await convertFile(ffmpeg, f.file, outputName, (ratio) => {
-          setFiles((prev) =>
-            prev.map((item) => {
-              if (item.id === fileId) {
-                const progress = Math.round(ratio * 100);
-                let eta = null;
-                if (item.startTime && progress > 0 && progress < 100) {
-                  const elapsed = Date.now() - item.startTime;
-                  const totalEstimated = elapsed / (progress / 100);
-                  eta = Math.round((totalEstimated - elapsed) / 1000);
+        const resolutionOptions = {
+          target: isResizer ? resolution : "original"
+        };
+
+        const data = await convertFile(
+          ffmpeg,
+          f.file,
+          outputName,
+          (ratio) => {
+            setFiles((prev) =>
+              prev.map((item) => {
+                if (item.id === fileId) {
+                  const progress = Math.round(ratio * 100);
+                  let eta = null;
+                  if (item.startTime && progress > 0 && progress < 100) {
+                    const elapsed = Date.now() - item.startTime;
+                    const totalEstimated = elapsed / (progress / 100);
+                    eta = Math.round((totalEstimated - elapsed) / 1000);
+                  }
+                  return { ...item, progress, eta };
                 }
-                return { ...item, progress, eta };
-              }
-              return item;
-            })
-          );
-        }, hsOptions);
+                return item;
+              })
+            );
+          },
+          hsOptions,
+          resolutionOptions
+        );
 
         if (cancelRef.current) break;
 
         // Buat File object dengan nama yang sesuai agar metadata penamaan tersimpan di browser
-        const outputFileName = f.newName || f.name.replace(/\.mkv$/i, ".mp4");
-        const fileObj = new File([data.buffer], outputFileName, { type: "video/mp4" });
+        const outputFileName = outputName;
+        const ext = outputFileName.match(/\.[^/.]+$/)?.[0]?.toLowerCase() || ".mp4";
+        let mimeType = "video/mp4";
+        if (ext === ".mkv") mimeType = "video/x-matroska";
+        else if (ext === ".webm") mimeType = "video/webm";
+        else if (ext === ".avi") mimeType = "video/x-msvideo";
+        else if (ext === ".mov") mimeType = "video/quicktime";
+        
+        const fileObj = new File([data.buffer], outputFileName, { type: mimeType });
         const blobUrl = URL.createObjectURL(fileObj);
 
         setFiles((prev) =>
@@ -148,6 +169,8 @@ export function useFFmpegConverter({ files, setFiles, addToast, hardsubConfig })
     addToast,
     setFiles,
     hardsubConfig,
+    resolution,
+    activeTab,
   ]);
 
   const cancelConversion = useCallback(async () => {

@@ -63,7 +63,7 @@ export async function getFFmpeg(onLog) {
 /**
  * Convert a single MKV file to MP4 via the Web Worker.
  */
-export async function convertFile(workerInstance, file, outputName, onProgress, hardsubOptions) {
+export async function convertFile(workerInstance, file, outputName, onProgress, hardsubOptions, resolutionOptions) {
   const id = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const arrayBuffer = await file.arrayBuffer();
   
@@ -77,7 +77,8 @@ export async function convertFile(workerInstance, file, outputName, onProgress, 
         id,
         fileData: arrayBuffer,
         outputName,
-        hardsubOptions
+        hardsubOptions,
+        resolutionOptions
       }
     }, [arrayBuffer]); // Transfer buffer for performance
   });

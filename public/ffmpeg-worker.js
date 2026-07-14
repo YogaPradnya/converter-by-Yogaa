@@ -76,11 +76,12 @@ self.onmessage = async (e) => {
     }
     
     else if (type === "CONVERT") {
-      const { id, fileData, outputName, hardsubOptions } = payload;
+      const { id, fileData, outputName, hardsubOptions, resolutionOptions } = payload;
       
       await initFFmpeg(); // Ensure initialized
       
-      const inputName = `input_${Date.now()}.mkv`;
+      const ext = outputName.match(/\.[^/.]+$/)?.[0]?.toLowerCase() || ".mp4";
+      const inputName = `input_${Date.now()}${ext}`;
 
       // Write file to virtual FS
       await ffmpeg.writeFile(inputName, new Uint8Array(fileData));
@@ -98,27 +99,40 @@ self.onmessage = async (e) => {
       try {
         // Run conversion
         let ffmpegArgs = [];
+        const targetRes = resolutionOptions?.target || "original";
+        let scaleHeight = null;
+        if (targetRes === "1080p") scaleHeight = 1080;
+        else if (targetRes === "720p") scaleHeight = 720;
+        else if (targetRes === "480p") scaleHeight = 480;
+        else if (targetRes === "360p") scaleHeight = 360;
+
+        let filterArgs = [];
         
+        // 1. Resolution Scaling
+        if (scaleHeight) {
+          filterArgs.push(`scale=-2:${scaleHeight}`);
+        }
+
+        // 2. Hardsub Options
         if (hardsubOptions && hardsubOptions.enabled) {
-          // HARDSUB MODE (Re-encode)
-          const { fontSize, scale, primaryColour, originalStyle, overrideFont } = hardsubOptions;
-          
-          let filterArgs = `subtitles=${inputName}:fontsdir=/`;
-          
-          if (!originalStyle) {
-            let forceStyle = `FontSize=${fontSize},ScaleX=${scale},ScaleY=${scale},PrimaryColour=${primaryColour}`;
-            if (overrideFont) forceStyle += `,Fontname=Poppins`;
-            filterArgs += `:force_style='${forceStyle}'`;
-          } else if (overrideFont) {
-            // Walau gaya asli dipertahankan, kita paksa ganti nama fontnya saja
-            filterArgs += `:force_style='Fontname=Poppins'`;
+          let subFilter = `subtitles=${inputName}:fontsdir=/`;
+          if (!hardsubOptions.originalStyle) {
+            let forceStyle = `FontSize=${hardsubOptions.fontSize},ScaleX=${hardsubOptions.scale},ScaleY=${hardsubOptions.scale},PrimaryColour=${hardsubOptions.primaryColour}`;
+            if (hardsubOptions.overrideFont) forceStyle += `,Fontname=Poppins`;
+            subFilter += `:force_style='${forceStyle}'`;
+          } else if (hardsubOptions.overrideFont) {
+            subFilter += `:force_style='Fontname=Poppins'`;
           }
-          
+          filterArgs.push(subFilter);
+        }
+
+        if (filterArgs.length > 0) {
+          // RE-ENCODE MODE (Scaling and/or Hardsubbing)
           ffmpegArgs = [
             "-i", inputName,
             "-map", "0:v",
             "-map", "0:a?", // Audio opsional
-            "-vf", filterArgs,
+            "-vf", filterArgs.join(","),
             "-c:v", "libx264",
             "-preset", "superfast",
             "-crf", "28",

@@ -11,12 +11,21 @@ import DropZone from "@/app/components/DropZone";
 import FileList from "@/app/components/FileList";
 import RenameSettings from "@/app/components/RenameSettings";
 import SubtitleSettings from "@/app/components/SubtitleSettings";
+import ResolutionSettings from "@/app/components/ResolutionSettings";
 import ConvertActions from "@/app/components/ConvertActions";
 import ConfirmModal from "@/app/components/ConfirmModal";
 
 export default function Home() {
-  // -- File Queue State --
-  const [files, setFiles] = useState([]);
+  // -- Navigation State --
+  const [activeTab, setActiveTab] = useState("mkvtomp4"); // "mkvtomp4" | "resizer"
+
+  // -- File Queue States (Separated) --
+  const [mkvFiles, setMkvFiles] = useState([]);
+  const [resizerFiles, setResizerFiles] = useState([]);
+
+  // Active queue getters and setters
+  const files = activeTab === "mkvtomp4" ? mkvFiles : resizerFiles;
+  const setFiles = activeTab === "mkvtomp4" ? setMkvFiles : setResizerFiles;
 
   // -- Rename State --
   const [renameFormat, setRenameFormat] = useState("{index}-360p");
@@ -32,13 +41,16 @@ export default function Home() {
   // -- Modal State --
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  // -- Hardsub State --
+  // -- Hardsub State (Only for MKV to MP4) --
   const [hardsubEnabled, setHardsubEnabled] = useState(false);
   const [hardsubOriginalStyle, setHardsubOriginalStyle] = useState(true);
   const [hardsubOverrideFont, setHardsubOverrideFont] = useState(false);
   const [hardsubFontSize, setHardsubFontSize] = useState(20);
   const [hardsubScale, setHardsubScale] = useState(50);
   const [hardsubColor, setHardsubColor] = useState("#ffffff");
+
+  // -- Resolution State (Only for Video Resizer) --
+  const [videoResolution, setVideoResolution] = useState("original");
 
   // -- UI State --
   const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
@@ -62,7 +74,14 @@ export default function Home() {
     isConverting,
     startConversion,
     cancelConversion,
-  } = useFFmpegConverter({ files, setFiles, addToast, hardsubConfig });
+  } = useFFmpegConverter({
+    files,
+    setFiles,
+    addToast,
+    hardsubConfig,
+    resolution: videoResolution,
+    activeTab,
+  });
 
   // -- Hapus / Unregister Service Worker jika pernah terdaftar --
   useEffect(() => {
@@ -76,28 +95,35 @@ export default function Home() {
   }, []);
 
   // -- Memory Cleanup for Blob URLs on Unmount --
-  const filesRef = useRef(files);
+  const mkvFilesRef = useRef(mkvFiles);
+  const resizerFilesRef = useRef(resizerFiles);
+
   useEffect(() => {
-    filesRef.current = files;
-  }, [files]);
+    mkvFilesRef.current = mkvFiles;
+  }, [mkvFiles]);
+
+  useEffect(() => {
+    resizerFilesRef.current = resizerFiles;
+  }, [resizerFiles]);
 
   useEffect(() => {
     return () => {
-      filesRef.current.forEach((f) => {
-        if (f.blobUrl) {
-          URL.revokeObjectURL(f.blobUrl);
-        }
+      mkvFilesRef.current.forEach((f) => {
+        if (f.blobUrl) URL.revokeObjectURL(f.blobUrl);
       });
-      clearAllCachedFiles();
+      resizerFilesRef.current.forEach((f) => {
+        if (f.blobUrl) URL.revokeObjectURL(f.blobUrl);
+      });
     };
   }, []);
 
   // -- Rename preview sync --
   useEffect(() => {
     if (!autoRenameEnabled) return;
+    const targetExt = activeTab === "resizer" ? null : ".mp4";
     setFiles((prev) =>
       prev.map((f, i) => {
-        const newName = applyTemplate(renameFormat, f.name, i, customStartNumber);
+        const newName = applyTemplate(renameFormat, f.name, i, customStartNumber, targetExt);
         if (f.newName === newName) return f;
 
         // Recreate blobUrl dengan File object nama baru jika file sudah completed
@@ -106,7 +132,14 @@ export default function Home() {
           if (f.blobUrl) {
             URL.revokeObjectURL(f.blobUrl);
           }
-          const fileObj = new File([f.data.buffer], newName, { type: "video/mp4" });
+          const ext = newName.match(/\.[^/.]+$/)?.[0]?.toLowerCase() || ".mp4";
+          let mimeType = "video/mp4";
+          if (ext === ".mkv") mimeType = "video/x-matroska";
+          else if (ext === ".webm") mimeType = "video/webm";
+          else if (ext === ".avi") mimeType = "video/x-msvideo";
+          else if (ext === ".mov") mimeType = "video/quicktime";
+
+          const fileObj = new File([f.data.buffer], newName, { type: mimeType });
           updatedBlobUrl = URL.createObjectURL(fileObj);
         }
 
@@ -117,50 +150,73 @@ export default function Home() {
         };
       })
     );
-  }, [renameFormat, customStartNumber, autoRenameEnabled]);
+  }, [renameFormat, customStartNumber, autoRenameEnabled, activeTab]);
 
   // -- File Management --
 
   const addFiles = useCallback(
     (fileList) => {
       const allFiles = Array.from(fileList);
-      const mkvFiles = allFiles.filter(
-        (f) =>
-          f.name.toLowerCase().endsWith(".mkv") ||
-          f.type === "video/x-matroska"
-      );
-      const rejected = allFiles.length - mkvFiles.length;
+      let acceptedFiles = [];
+      let rejected = 0;
 
-      if (rejected > 0) {
-        addToast(
-          `${rejected} file${rejected > 1 ? "s" : ""} rejected (only .mkv accepted)`,
-          "warning"
+      if (activeTab === "mkvtomp4") {
+        acceptedFiles = allFiles.filter(
+          (f) =>
+            f.name.toLowerCase().endsWith(".mkv") ||
+            f.type === "video/x-matroska"
         );
+        rejected = allFiles.length - acceptedFiles.length;
+        if (rejected > 0) {
+          addToast(
+            `${rejected} file${rejected > 1 ? "s" : ""} ditolak (hanya file .mkv yang diterima)`,
+            "warning"
+          );
+        }
+      } else {
+        // Video Resizer: Terima semua format video
+        acceptedFiles = allFiles.filter(
+          (f) =>
+            f.type.startsWith("video/") ||
+            /\.(mkv|mp4|webm|avi|mov|m4v|flv|wmv|3gp)$/i.test(f.name)
+        );
+        rejected = allFiles.length - acceptedFiles.length;
+        if (rejected > 0) {
+          addToast(
+            `${rejected} file${rejected > 1 ? "s" : ""} ditolak (hanya file video yang diterima)`,
+            "warning"
+          );
+        }
       }
 
-      if (mkvFiles.length === 0) return;
+      if (acceptedFiles.length === 0) return;
 
       setFiles((prev) => {
-        const newEntries = mkvFiles.map((f, i) => ({
-          id: generateId(),
-          file: f,
-          name: f.name,
-          newName: autoRenameEnabled
-            ? applyTemplate(renameFormat, f.name, prev.length + i, customStartNumber)
-            : f.name.replace(/\.mkv$/i, ".mp4"),
-          size: formatBytes(f.size),
-          status: "queued",
-          progress: 0,
-          startTime: null,
-          eta: null,
-          data: null,
-        }));
+        const newEntries = acceptedFiles.map((f, i) => {
+          const targetExt = activeTab === "resizer" ? null : ".mp4";
+          const newName = autoRenameEnabled
+            ? applyTemplate(renameFormat, f.name, prev.length + i, customStartNumber, targetExt)
+            : (activeTab === "resizer" ? f.name : f.name.replace(/\.mkv$/i, ".mp4"));
+
+          return {
+            id: generateId(),
+            file: f,
+            name: f.name,
+            newName,
+            size: formatBytes(f.size),
+            status: "queued",
+            progress: 0,
+            startTime: null,
+            eta: null,
+            data: null,
+          };
+        });
         return [...prev, ...newEntries];
       });
 
-      addToast(`${mkvFiles.length} file${mkvFiles.length > 1 ? "s" : ""} added to queue`, "success");
+      addToast(`${acceptedFiles.length} file${acceptedFiles.length > 1 ? "s" : ""} ditambahkan ke antrean`, "success");
     },
-    [renameFormat, customStartNumber, autoRenameEnabled, addToast]
+    [renameFormat, customStartNumber, autoRenameEnabled, addToast, activeTab]
   );
 
   const removeFile = useCallback((id) => {
@@ -173,7 +229,7 @@ export default function Home() {
       }
       return prev.filter((f) => f.id !== id);
     });
-  }, []);
+  }, [setFiles]);
 
   const reorderFiles = useCallback((dragIndex, hoverIndex) => {
     if (isConverting) return; // Prevent reorder during conversion
@@ -184,7 +240,7 @@ export default function Home() {
       newFiles.splice(hoverIndex, 0, draggedFile);
       return newFiles;
     });
-  }, [isConverting]);
+  }, [isConverting, setFiles]);
 
   const clearFiles = useCallback(() => {
     if (isConverting) return;
@@ -200,7 +256,7 @@ export default function Home() {
     });
     setFiles([]);
     addToast("Queue cleared", "info");
-  }, [isConverting, files, addToast]);
+  }, [isConverting, files, addToast, setFiles]);
 
   const confirmClear = useCallback(() => {
     setShowClearConfirm(false);
@@ -211,7 +267,7 @@ export default function Home() {
     });
     setFiles([]);
     addToast("Queue cleared", "info");
-  }, [addToast, files]);
+  }, [addToast, files, setFiles]);
 
   // -- Drag & Drop Handlers --
 
@@ -242,7 +298,8 @@ export default function Home() {
   // -- Download Handlers --
 
   const handleDownload = useCallback((file) => {
-    const filename = file.newName || file.name.replace(/\.mkv$/i, ".mp4");
+    const isResizer = activeTab === "resizer";
+    const filename = file.newName || (isResizer ? file.name : file.name.replace(/\.mkv$/i, ".mp4"));
 
     // Unduh langsung via blobUrl atau data mentah
     if (file.blobUrl) {
@@ -250,7 +307,7 @@ export default function Home() {
     } else if (file.data) {
       downloadFile(file.data, filename);
     }
-  }, []);
+  }, [activeTab]);
 
   const downloadZipPart = useCallback(async (startIndex, endIndex) => {
     const completed = files.filter((f) => f.status === "completed" && f.data);
@@ -266,7 +323,8 @@ export default function Home() {
 
       // Memasukkan setiap file di dalam part ini ke dalam zip
       chunk.forEach((f) => {
-        const fileName = f.newName || f.name.replace(/\.mkv$/i, ".mp4");
+        const isResizer = activeTab === "resizer";
+        const fileName = f.newName || (isResizer ? f.name : f.name.replace(/\.mkv$/i, ".mp4"));
         zip.file(fileName, f.data);
       });
 
@@ -295,19 +353,20 @@ export default function Home() {
     } finally {
       setIsZipping(false);
     }
-  }, [files, addToast]);
+  }, [files, addToast, activeTab]);
 
   // -- Batch Rename --
 
   const applyBatchRename = useCallback(() => {
+    const targetExt = activeTab === "resizer" ? null : ".mp4";
     setFiles((prev) =>
       prev.map((f, i) => ({
         ...f,
-        newName: applyTemplate(renameFormat, f.name, i, customStartNumber),
+        newName: applyTemplate(renameFormat, f.name, i, customStartNumber, targetExt),
       }))
     );
     addToast("Batch rename applied", "success");
-  }, [renameFormat, customStartNumber, addToast]);
+  }, [renameFormat, customStartNumber, addToast, activeTab, setFiles]);
 
   // -- Computed Stats --
 
@@ -387,6 +446,37 @@ export default function Home() {
 
       {/* MAIN */}
       <main className="app-container" id="main-content">
+        {/* Navigation Tabs Bar */}
+        <div className="nav-tabs" style={{ gridColumn: "span 2" }}>
+          <button
+            className={`nav-tab ${activeTab === "mkvtomp4" ? "active" : ""}`}
+            onClick={() => setActiveTab("mkvtomp4")}
+            disabled={isConverting}
+            type="button"
+          >
+            <svg className="tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+              <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+              <path d="m10 11 3 3-3 3" />
+              <path d="m14 11 3 3-3 3" />
+            </svg>
+            Convert MKV to MP4
+          </button>
+          <button
+            className={`nav-tab ${activeTab === "resizer" ? "active" : ""}`}
+            onClick={() => setActiveTab("resizer")}
+            disabled={isConverting}
+            type="button"
+          >
+            <svg className="tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+              <line x1="8" y1="21" x2="16" y2="21" />
+              <line x1="12" y1="17" x2="12" y2="21" />
+            </svg>
+            Video Resolution Resizer
+          </button>
+        </div>
+
         {/* LEFT PANEL */}
         <section className="main-panel">
           <DropZone
@@ -395,6 +485,7 @@ export default function Home() {
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
+            activeTab={activeTab}
           />
 
           {/* STATS */}
@@ -460,20 +551,27 @@ export default function Home() {
                 filesCount={totalFiles}
               />
 
-              <SubtitleSettings
-                hardsubEnabled={hardsubEnabled}
-                onHardsubToggle={setHardsubEnabled}
-                hardsubOriginalStyle={hardsubOriginalStyle}
-                onOriginalStyleToggle={setHardsubOriginalStyle}
-                hardsubOverrideFont={hardsubOverrideFont}
-                onOverrideFontToggle={setHardsubOverrideFont}
-                hardsubFontSize={hardsubFontSize}
-                onFontSizeChange={setHardsubFontSize}
-                hardsubScale={hardsubScale}
-                onScaleChange={setHardsubScale}
-                hardsubColor={hardsubColor}
-                onColorChange={setHardsubColor}
-              />
+              {activeTab === "mkvtomp4" ? (
+                <SubtitleSettings
+                  hardsubEnabled={hardsubEnabled}
+                  onHardsubToggle={setHardsubEnabled}
+                  hardsubOriginalStyle={hardsubOriginalStyle}
+                  onOriginalStyleToggle={setHardsubOriginalStyle}
+                  hardsubOverrideFont={hardsubOverrideFont}
+                  onOverrideFontToggle={setHardsubOverrideFont}
+                  hardsubFontSize={hardsubFontSize}
+                  onFontSizeChange={setHardsubFontSize}
+                  hardsubScale={hardsubScale}
+                  onScaleChange={setHardsubScale}
+                  hardsubColor={hardsubColor}
+                  onColorChange={setHardsubColor}
+                />
+              ) : (
+                <ResolutionSettings
+                  resolution={videoResolution}
+                  onResolutionChange={setVideoResolution}
+                />
+              )}
             </div>
           </div>
 

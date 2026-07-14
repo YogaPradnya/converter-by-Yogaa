@@ -1571,3 +1571,66 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid var(--hairline-strong);
 }
 
+/* ============================================================
+   Navigation Tabs Style
+   ============================================================ */
+.nav-tabs {
+  display: flex;
+  background: var(--surface-strong);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-lg);
+  padding: 4px;
+  gap: 4px;
+  margin-bottom: var(--sp-lg);
+  position: relative;
+  z-index: 1;
+}
+
+.nav-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-xs);
+  padding: 10px var(--sp-md);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.nav-tab:hover:not(:disabled) {
+  color: var(--ink);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="dark"] .nav-tab:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.nav-tab.active {
+  color: var(--on-primary);
+  background: var(--primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.nav-tab:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tab-icon {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.nav-tab:hover:not(:disabled) .tab-icon {
+  transform: translateY(-1px);
+}
+
+

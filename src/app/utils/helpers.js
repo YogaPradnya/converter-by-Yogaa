@@ -11,8 +11,10 @@ export function generateId() {
  * Apply rename template to a filename.
  * Supports tokens: {original}, {index}, {date}, {time}
  */
-export function applyTemplate(template, originalName, index, startNum) {
+export function applyTemplate(template, originalName, index, startNum, targetExt = ".mp4") {
   const baseName = originalName.replace(/\.[^/.]+$/, "");
+  const originalExt = originalName.match(/\.[^/.]+$/)?.[0] || ".mp4";
+  const ext = targetExt !== null ? targetExt : originalExt;
   const now = new Date();
   const dateStr = now.toISOString().split("T")[0];
   const timeStr =
@@ -26,7 +28,7 @@ export function applyTemplate(template, originalName, index, startNum) {
       .replace(/\{original\}/g, baseName)
       .replace(/\{index\}/g, num)
       .replace(/\{date\}/g, dateStr)
-      .replace(/\{time\}/g, timeStr) + ".mp4"
+      .replace(/\{time\}/g, timeStr) + ext
   );
 }
 
