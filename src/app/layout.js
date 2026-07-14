@@ -1,5 +1,6 @@
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import Script from "next/script";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -29,7 +30,13 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <head />
-      <body>{children}</body>
+      <body>
+        {children}
+        <Script 
+          src="https://pl30356323.effectivecpmnetwork.com/1f/c1/36/1fc136931a4dbe06351e49326c469a21.js" 
+          strategy="afterInteractive"
+        />
+      </body>
     </html>
   );
 }

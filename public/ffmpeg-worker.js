@@ -62,6 +62,19 @@ self.onmessage = async (e) => {
       self.postMessage({ type: "INIT_SUCCESS" });
     } 
     
+    else if (type === "CANCEL") {
+      // Terminate FFmpeg process secara paksa
+      if (ffmpeg) {
+        try {
+          ffmpeg.terminate();
+        } catch (_) {
+          // Ignore terminate errors
+        }
+        ffmpeg = null;
+      }
+      self.postMessage({ type: "CANCEL_DONE" });
+    }
+    
     else if (type === "CONVERT") {
       const { id, fileData, outputName, hardsubOptions } = payload;
       

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import { getFFmpeg, convertFile } from "@/lib/ffmpeg";
+import { getFFmpeg, convertFile, cancelAllConversions } from "@/lib/ffmpeg";
 import { hexToAssColor } from "@/app/utils/helpers";
 
 /**
@@ -145,9 +145,25 @@ export function useFFmpegConverter({ files, setFiles, addToast, hardsubConfig })
     hardsubConfig,
   ]);
 
-  const cancelConversion = useCallback(() => {
+  const cancelConversion = useCallback(async () => {
     cancelRef.current = true;
-  }, []);
+    
+    // Terminate worker secara paksa agar proses yang sedang berjalan langsung berhenti
+    await cancelAllConversions();
+    
+    // Reset status file yang sedang converting kembali ke queued
+    setFiles((prev) =>
+      prev.map((item) =>
+        item.status === "converting"
+          ? { ...item, status: "queued", progress: 0, eta: null }
+          : item
+      )
+    );
+    
+    setIsConverting(false);
+    setFfmpegReady(false); // Worker baru perlu di-init ulang
+    addToast("Conversion cancelled", "warning");
+  }, [setFiles, addToast]);
 
   return {
     ffmpegReady,

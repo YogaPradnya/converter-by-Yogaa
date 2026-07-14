@@ -84,6 +84,27 @@ export async function convertFile(workerInstance, file, outputName, onProgress, 
 }
 
 /**
+ * Cancel all running conversions by terminating the worker entirely.
+ * A new worker will be created on the next getFFmpeg() call.
+ */
+export async function cancelAllConversions() {
+  if (!worker) return;
+
+  // Reject semua pending handlers agar promise tidak menggantung
+  for (const [key, handler] of messageHandlers.entries()) {
+    if (key !== "INIT" && handler.reject) {
+      handler.reject(new Error("Conversion cancelled by user"));
+    }
+  }
+  messageHandlers.clear();
+
+  // Terminate worker secara paksa
+  worker.terminate();
+  worker = null;
+  initPromise = null;
+}
+
+/**
  * Create a download link for converted file data and trigger download.
  */
 export function downloadFile(data, filename) {
