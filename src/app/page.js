@@ -447,7 +447,7 @@ export default function Home() {
       {/* MAIN */}
       <main className="app-container" id="main-content">
         {/* Navigation Tabs Bar */}
-        <div className="nav-tabs" style={{ gridColumn: "span 2" }}>
+        <div className="nav-tabs" style={{ gridColumn: "1 / -1" }}>
           <button
             className={`nav-tab ${activeTab === "mkvtomp4" ? "active" : ""}`}
             onClick={() => setActiveTab("mkvtomp4")}
