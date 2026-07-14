@@ -118,8 +118,8 @@ export function downloadFile(urlOrData, filename) {
     shouldRevoke = true;
   }
 
-  // Tambahkan hash fragment berisi nama file di akhir URL untuk membantu 1DM mendeteksi nama file
-  const downloadUrl = url.includes("#") ? url : `${url}#${encodeURIComponent(filename)}`;
+  // Tambahkan hash fragment berisi nama file di akhir URL dengan format '#filename=' untuk membantu 1DM mendeteksi nama file
+  const downloadUrl = url.includes("#filename=") ? url : `${url}#filename=${encodeURIComponent(filename)}`;
 
   const a = document.createElement("a");
   a.href = downloadUrl;

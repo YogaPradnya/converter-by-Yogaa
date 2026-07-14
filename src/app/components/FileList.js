@@ -73,7 +73,7 @@ function FileRow({
       <div className="file-actions">
         {file.status === "completed" && (file.blobUrl || file.data) && (
           <a
-            href={file.blobUrl ? `${file.blobUrl}#${encodeURIComponent(file.newName || file.name.replace(/\.mkv$/i, ".mp4"))}` : "#"}
+            href={file.blobUrl ? `${file.blobUrl}#filename=${encodeURIComponent(file.newName || file.name.replace(/\.mkv$/i, ".mp4"))}` : "#"}
             download={file.newName || file.name.replace(/\.mkv$/i, ".mp4")}
             onClick={(e) => {
               if (!file.blobUrl && file.data) {
