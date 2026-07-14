@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { getDownloadUrl } from "@/lib/downloadService";
 
 /**
  * Single file row in the queue list.
@@ -72,17 +71,13 @@ function FileRow({
         )}
       </div>
       <div className="file-actions">
-        {file.status === "completed" && (file.swCached || file.blobUrl || file.data) && (
+        {file.status === "completed" && (file.blobUrl || file.data) && (
           <a
-            href={file.swCached
-              ? getDownloadUrl(file.id, file.newName || file.name.replace(/\.mkv$/i, ".mp4"))
-              : (file.blobUrl || "#")}
+            href={file.blobUrl || "#"}
             download={file.newName || file.name.replace(/\.mkv$/i, ".mp4")}
             onClick={(e) => {
-              if (!file.swCached && !file.blobUrl && file.data) {
-                e.preventDefault();
-                onDownload(file);
-              }
+              e.preventDefault();
+              onDownload(file);
             }}
             className="btn-icon"
             title="Download"

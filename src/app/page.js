@@ -224,12 +224,33 @@ export default function Home() {
 
   // -- Download Handlers --
 
-  const handleDownload = useCallback((file) => {
+  const handleDownload = useCallback(async (file) => {
     const filename = file.newName || file.name.replace(/\.mkv$/i, ".mp4");
-    // Prioritaskan Service Worker (nama file dinamis) untuk konsistensi di semua browser
+
+    // Coba unduh melalui Service Worker terlebih dahulu (nama file dijamin konsisten)
     if (file.swCached) {
-      downloadFile(getDownloadUrl(file.id, filename), filename);
-    } else if (file.blobUrl) {
+      try {
+        const swUrl = getDownloadUrl(file.id, filename);
+        const res = await fetch(swUrl);
+        if (res.ok) {
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 10000);
+          return; // Berhasil via SW, tidak perlu fallback
+        }
+      } catch (_) {
+        // SW gagal, lanjut ke fallback blobUrl
+      }
+    }
+
+    // Fallback: unduh langsung via blobUrl atau data mentah
+    if (file.blobUrl) {
       downloadFile(file.blobUrl, filename);
     } else if (file.data) {
       downloadFile(file.data, filename);
