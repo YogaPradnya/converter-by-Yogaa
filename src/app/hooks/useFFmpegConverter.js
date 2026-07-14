@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from "react";
 import { getFFmpeg, convertFile, cancelAllConversions } from "@/lib/ffmpeg";
+import { cacheFileForDownload } from "@/lib/downloadService";
 import { hexToAssColor } from "@/app/utils/helpers";
 
 /**
@@ -104,10 +105,17 @@ export function useFFmpegConverter({ files, setFiles, addToast, hardsubConfig })
 
         if (cancelRef.current) break;
 
+        // Buat Blob URL agar memori data tetap hidup untuk diunduh secara stabil
+        const blob = new Blob([data.buffer], { type: "video/mp4" });
+        const blobUrl = URL.createObjectURL(blob);
+
+        // Simpan ke cache Service Worker untuk auto-rename yang konsisten di semua browser
+        const swCached = cacheFileForDownload(fileId, data);
+
         setFiles((prev) =>
           prev.map((item) =>
             item.id === fileId
-              ? { ...item, status: "completed", progress: 100, data }
+              ? { ...item, status: "completed", progress: 100, data, blobUrl, swCached }
               : item
           )
         );

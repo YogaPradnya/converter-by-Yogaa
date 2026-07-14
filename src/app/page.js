@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { downloadFile, formatBytes } from "@/lib/ffmpeg";
+import { registerDownloadSW, removeCachedFile, clearAllCachedFiles, getDownloadUrl } from "@/lib/downloadService";
 import { generateId, applyTemplate } from "@/app/utils/helpers";
 import { useToast } from "@/app/hooks/useToast";
 import { useTheme } from "@/app/hooks/useTheme";
@@ -64,6 +65,28 @@ export default function Home() {
     cancelConversion,
   } = useFFmpegConverter({ files, setFiles, addToast, hardsubConfig });
 
+  // -- Registrasi Download Service Worker --
+  useEffect(() => {
+    registerDownloadSW();
+  }, []);
+
+  // -- Memory Cleanup for Blob URLs on Unmount --
+  const filesRef = useRef(files);
+  useEffect(() => {
+    filesRef.current = files;
+  }, [files]);
+
+  useEffect(() => {
+    return () => {
+      filesRef.current.forEach((f) => {
+        if (f.blobUrl) {
+          URL.revokeObjectURL(f.blobUrl);
+        }
+      });
+      clearAllCachedFiles();
+    };
+  }, []);
+
   // -- Rename preview sync --
   useEffect(() => {
     if (!autoRenameEnabled) return;
@@ -120,7 +143,17 @@ export default function Home() {
   );
 
   const removeFile = useCallback((id) => {
-    setFiles((prev) => prev.filter((f) => f.id !== id));
+    setFiles((prev) => {
+      const fileToRemove = prev.find((f) => f.id === id);
+      if (fileToRemove) {
+        if (fileToRemove.blobUrl) {
+          URL.revokeObjectURL(fileToRemove.blobUrl);
+        }
+        // Hapus juga dari cache Service Worker
+        removeCachedFile(fileToRemove.id);
+      }
+      return prev.filter((f) => f.id !== id);
+    });
   }, []);
 
   const reorderFiles = useCallback((dragIndex, hoverIndex) => {
@@ -141,15 +174,27 @@ export default function Home() {
       setShowClearConfirm(true);
       return;
     }
+    files.forEach((f) => {
+      if (f.blobUrl) {
+        URL.revokeObjectURL(f.blobUrl);
+      }
+    });
+    clearAllCachedFiles();
     setFiles([]);
     addToast("Queue cleared", "info");
   }, [isConverting, files, addToast]);
 
   const confirmClear = useCallback(() => {
     setShowClearConfirm(false);
+    files.forEach((f) => {
+      if (f.blobUrl) {
+        URL.revokeObjectURL(f.blobUrl);
+      }
+    });
+    clearAllCachedFiles();
     setFiles([]);
     addToast("Queue cleared", "info");
-  }, [addToast]);
+  }, [addToast, files]);
 
   // -- Drag & Drop Handlers --
 
@@ -180,8 +225,14 @@ export default function Home() {
   // -- Download Handlers --
 
   const handleDownload = useCallback((file) => {
-    if (file.data) {
-      downloadFile(file.data, file.newName || file.name.replace(/\.mkv$/i, ".mp4"));
+    const filename = file.newName || file.name.replace(/\.mkv$/i, ".mp4");
+    // Prioritaskan Service Worker (nama file dinamis) untuk konsistensi di semua browser
+    if (file.swCached) {
+      downloadFile(getDownloadUrl(file.id, filename), filename);
+    } else if (file.blobUrl) {
+      downloadFile(file.blobUrl, filename);
+    } else if (file.data) {
+      downloadFile(file.data, filename);
     }
   }, []);
 

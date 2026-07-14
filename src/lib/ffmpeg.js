@@ -107,9 +107,16 @@ export async function cancelAllConversions() {
 /**
  * Create a download link for converted file data and trigger download.
  */
-export function downloadFile(data, filename) {
-  const blob = new Blob([data.buffer], { type: "video/mp4" });
-  const url = URL.createObjectURL(blob);
+export function downloadFile(urlOrData, filename) {
+  let url = urlOrData;
+  let shouldRevoke = false;
+
+  if (typeof urlOrData !== "string") {
+    const blob = new Blob([urlOrData.buffer], { type: "video/mp4" });
+    url = URL.createObjectURL(blob);
+    shouldRevoke = true;
+  }
+
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
@@ -117,10 +124,12 @@ export function downloadFile(data, filename) {
   a.click();
   document.body.removeChild(a);
   
-  // Berikan jeda sebelum menghapus memori agar download tidak dibatalkan paksa
-  setTimeout(() => {
-    URL.revokeObjectURL(url);
-  }, 2000);
+  if (shouldRevoke) {
+    // Berikan jeda 10 detik agar download manager eksternal sempat mengambil file
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 10000);
+  }
 }
 
 /**
