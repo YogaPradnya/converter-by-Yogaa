@@ -14,6 +14,7 @@ import SubtitleSettings from "@/app/components/SubtitleSettings";
 import ResolutionSettings from "@/app/components/ResolutionSettings";
 import ConvertActions from "@/app/components/ConvertActions";
 import ConfirmModal from "@/app/components/ConfirmModal";
+import AdBanner from "@/app/components/AdBanner";
 
 export default function Home() {
   // -- Navigation State --
@@ -479,6 +480,7 @@ export default function Home() {
 
         {/* LEFT PANEL */}
         <section className="main-panel">
+          <AdBanner id="8916ec962f6b298db98cf3ac5af1d871" width={468} height={60} />
           <DropZone
             onFilesAdded={addFiles}
             dragOver={dragOver}
